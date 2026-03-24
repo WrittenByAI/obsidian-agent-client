@@ -60,10 +60,20 @@ If your plugin does not need CSS, delete this file.
 }
 
 /* ===== Scroll to Bottom Button ===== */
+/* Wrapper: button is absolutely positioned above the scroll layer so clicks are not stolen by message content */
+.agent-client-chat-messages-wrap {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
 .agent-client-scroll-to-bottom {
-	position: sticky;
-	bottom: 4px;
-	align-self: center;
+	position: absolute;
+	bottom: 12px;
+	left: 50%;
+	transform: translateX(-50%);
 	padding: 6px !important;
 	margin: 0 !important;
 	border: none !important;
@@ -79,7 +89,9 @@ If your plugin does not need CSS, delete this file.
 	box-shadow: none !important;
 	min-width: unset !important;
 	min-height: unset !important;
-	z-index: 10;
+	z-index: 50;
+	pointer-events: auto;
+	touch-action: manipulation;
 }
 
 .agent-client-scroll-to-bottom svg {
@@ -894,10 +906,19 @@ If your plugin does not need CSS, delete this file.
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
-	gap: 4px;
+	gap: 8px;
+	min-width: 0;
 	padding: 6px 12px;
 	border-bottom: 1px solid var(--background-modifier-border);
 	background-color: transparent;
+}
+
+.agent-client-auto-mention-left {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	flex: 1 1 auto;
 }
 
 .agent-client-pinned-selection-list {
@@ -955,7 +976,9 @@ If your plugin does not need CSS, delete this file.
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: calc(100% - 24px);
+	min-width: 0;
+	flex: 1 1 auto;
+	max-width: 100%;
 }
 
 .agent-client-mention-badge.agent-client-disabled {
@@ -1004,6 +1027,7 @@ If your plugin does not need CSS, delete this file.
 }
 
 .agent-client-auto-mention-pin-btn {
+	flex-shrink: 0;
 	margin-left: auto;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
@@ -1843,8 +1867,9 @@ If your plugin does not need CSS, delete this file.
 
 .agent-client-attachment-preview-remove {
 	position: absolute;
-	top: -6px;
-	right: -6px;
+	top: 2px;
+	right: 2px;
+	z-index: 2;
 	width: 18px;
 	height: 18px;
 	padding: 0;
@@ -1856,14 +1881,16 @@ If your plugin does not need CSS, delete this file.
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	opacity: 0;
+	opacity: 0.92;
 	transition: opacity 0.15s ease;
 	box-shadow: none !important;
+	pointer-events: auto;
 }
 
 .agent-client-attachment-preview-remove svg {
 	width: 12px;
 	height: 12px;
+	pointer-events: none;
 }
 
 .agent-client-attachment-preview-item:hover

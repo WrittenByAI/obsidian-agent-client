@@ -1,5 +1,11 @@
 import * as React from "react";
-const { useRef, useState, useEffect, useCallback } = React;
+const {
+	useRef,
+	useState,
+	useEffect,
+	useCallback,
+	useLayoutEffect,
+} = React;
 
 import type { ChatMessage } from "../../domain/models/chat-message";
 import type { IAcpClient } from "../../adapters/acp/acp.adapter";
@@ -59,6 +65,7 @@ export function ChatMessages({
 	hasActivePermission,
 }: ChatMessagesProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const scrollToBottomBtnRef = useRef<HTMLButtonElement>(null);
 	const [isAtBottom, setIsAtBottom] = useState(true);
 
 	/**
@@ -118,65 +125,75 @@ export function ChatMessages({
 		checkIfAtBottom();
 	}, [view, checkIfAtBottom]);
 
+	useLayoutEffect(() => {
+		const el = scrollToBottomBtnRef.current;
+		if (!el) {
+			return;
+		}
+		setIcon(el, "chevron-down");
+	}, [isAtBottom, messages.length]);
+
 	return (
-		<div ref={containerRef} className="agent-client-chat-view-messages">
-			{messages.length === 0 ? (
-				<div className="agent-client-chat-empty-state">
-					{isRestoringSession
-						? "Restoring session..."
-						: !isSessionReady
-							? `Connecting to ${agentLabel}...`
-							: `Start a conversation with ${agentLabel}...`}
-				</div>
-			) : (
-				<>
-					{messages.map((message) => (
-						<MessageRenderer
-							key={message.id}
-							message={message}
-							plugin={plugin}
-							acpClient={acpClient}
-							onApprovePermission={onApprovePermission}
-						/>
-					))}
-					<div
-						className={`agent-client-loading-indicator ${!isSending ? "agent-client-hidden" : ""}`}
-					>
-						<div className="agent-client-loading-dots">
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-							<div className="agent-client-loading-dot"></div>
-						</div>
-						{hasActivePermission && (
-							<span className="agent-client-loading-status">
-								Waiting for permission...
-							</span>
-						)}
+		<div className="agent-client-chat-messages-wrap">
+			<div ref={containerRef} className="agent-client-chat-view-messages">
+				{messages.length === 0 ? (
+					<div className="agent-client-chat-empty-state">
+						{isRestoringSession
+							? "Restoring session..."
+							: !isSessionReady
+								? `Connecting to ${agentLabel}...`
+								: `Start a conversation with ${agentLabel}...`}
 					</div>
-					{!isAtBottom && (
-						<button
-							className="agent-client-scroll-to-bottom"
-							onClick={() => {
-								const container = containerRef.current;
-								if (container) {
-									container.scrollTo({
-										top: container.scrollHeight,
-										behavior: "smooth",
-									});
-								}
-							}}
-							ref={(el) => {
-								if (el) setIcon(el, "chevron-down");
-							}}
-						/>
-					)}
-				</>
+				) : (
+					<>
+						{messages.map((message) => (
+							<MessageRenderer
+								key={message.id}
+								message={message}
+								plugin={plugin}
+								acpClient={acpClient}
+								onApprovePermission={onApprovePermission}
+							/>
+						))}
+						<div
+							className={`agent-client-loading-indicator ${!isSending ? "agent-client-hidden" : ""}`}
+						>
+							<div className="agent-client-loading-dots">
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+								<div className="agent-client-loading-dot"></div>
+							</div>
+							{hasActivePermission && (
+								<span className="agent-client-loading-status">
+									Waiting for permission...
+								</span>
+							)}
+						</div>
+					</>
+				)}
+			</div>
+			{messages.length > 0 && !isAtBottom && (
+				<button
+					type="button"
+					ref={scrollToBottomBtnRef}
+					className="agent-client-scroll-to-bottom"
+					aria-label="Scroll to bottom"
+					onClick={() => {
+						const container = containerRef.current;
+						if (container) {
+							container.scrollTo({
+								top: container.scrollHeight,
+								behavior: "smooth",
+							});
+						}
+					}}
+				/>
 			)}
 		</div>
 	);

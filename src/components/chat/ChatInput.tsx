@@ -1,5 +1,11 @@
 import * as React from "react";
-const { useRef, useState, useEffect, useCallback } = React;
+const {
+	useRef,
+	useState,
+	useEffect,
+	useLayoutEffect,
+	useCallback,
+} = React;
 import { setIcon, DropdownComponent, Notice } from "obsidian";
 
 import type AgentClientPlugin from "../../plugin";
@@ -233,6 +239,7 @@ export function ChatInput({
 
 	// Refs
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const autoMentionToggleRef = useRef<HTMLButtonElement>(null);
 	const dragCounterRef = useRef(0);
 	const sendButtonRef = useRef<HTMLButtonElement>(null);
 	const modeDropdownRef = useRef<HTMLDivElement>(null);
@@ -297,6 +304,15 @@ export function ChatInput({
 			new Notice("[Agent Client] Failed to pin selection");
 		}
 	}, [canPinSelection, onAddPinnedSelection]);
+
+	useLayoutEffect(() => {
+		const el = autoMentionToggleRef.current;
+		if (!el) {
+			return;
+		}
+		const iconName = autoMention.isDisabled ? "plus" : "x";
+		setIcon(el, iconName);
+	}, [autoMention.isDisabled, autoMention.activeNote?.path]);
 
 	/**
 	 * Convert a File to Base64 string.
@@ -1203,6 +1219,7 @@ export function ChatInput({
 									@{item.noteName}:L{item.fromLine}-{item.toLine}
 								</span>
 								<button
+									type="button"
 									className="agent-client-pinned-selection-remove"
 									onClick={() =>
 										onRemovePinnedSelection(item.id)
@@ -1219,47 +1236,40 @@ export function ChatInput({
 				{/* Auto-mention Badge */}
 				{autoMentionEnabled && autoMention.activeNote && (
 					<div className="agent-client-auto-mention-inline">
-						<span
-							className={`agent-client-mention-badge ${autoMention.isDisabled ? "agent-client-disabled" : ""}`}
-						>
-							@{autoMention.activeNote.name}
-							{autoMention.activeNote.selection && (
-								<span className="agent-client-selection-indicator">
-									{":"}
-									{autoMention.activeNote.selection.from
-										.line + 1}
-									-
-									{autoMention.activeNote.selection.to.line +
-										1}
-								</span>
-							)}
-						</span>
-						<button
-							className="agent-client-auto-mention-toggle-btn"
-							onClick={(e) => {
-								const newDisabledState =
-									!autoMention.isDisabled;
-								autoMention.toggle(newDisabledState);
-								const iconName = newDisabledState
-									? "x"
-									: "plus";
-								setIcon(e.currentTarget, iconName);
-							}}
-							title={
-								autoMention.isDisabled
-									? "Enable auto-mention"
-									: "Temporarily disable auto-mention"
-							}
-							ref={(el) => {
-								if (el) {
-									const iconName = autoMention.isDisabled
-										? "plus"
-										: "x";
-									setIcon(el, iconName);
+						<div className="agent-client-auto-mention-left">
+							<span
+								className={`agent-client-mention-badge ${autoMention.isDisabled ? "agent-client-disabled" : ""}`}
+							>
+								@{autoMention.activeNote.name}
+								{autoMention.activeNote.selection && (
+									<span className="agent-client-selection-indicator">
+										{":"}
+										{autoMention.activeNote.selection.from
+											.line + 1}
+										-
+										{autoMention.activeNote.selection.to
+											.line + 1}
+									</span>
+								)}
+							</span>
+							<button
+								type="button"
+								ref={autoMentionToggleRef}
+								className="agent-client-auto-mention-toggle-btn"
+								onClick={() => {
+									autoMention.toggle(
+										!autoMention.isDisabled,
+									);
+								}}
+								title={
+									autoMention.isDisabled
+										? "Enable auto-mention"
+										: "Temporarily disable auto-mention"
 								}
-							}}
-						/>
+							/>
+						</div>
 						<button
+							type="button"
 							className="agent-client-auto-mention-pin-btn"
 							onClick={() => void handlePinSelection()}
 							disabled={!canPinSelection}
