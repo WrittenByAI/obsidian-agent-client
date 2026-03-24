@@ -19,6 +19,10 @@ export interface ChatHeaderProps {
 	onShowMenu: (e: React.MouseEvent<HTMLButtonElement>) => void;
 	/** Callback to open session history */
 	onOpenHistory?: () => void;
+	/** Callback to toggle session sidebar */
+	onToggleSidebar?: () => void;
+	/** Whether session sidebar is currently visible */
+	isSidebarVisible?: boolean;
 }
 
 /**
@@ -37,6 +41,8 @@ export function ChatHeader({
 	onExportChat,
 	onShowMenu,
 	onOpenHistory,
+	onToggleSidebar,
+	isSidebarVisible = false,
 }: ChatHeaderProps) {
 	return (
 		<div className="agent-client-chat-view-header">
@@ -51,6 +57,17 @@ export function ChatHeader({
 				</p>
 			)}
 			<div className="agent-client-chat-view-header-actions">
+				{onToggleSidebar && (
+					<HeaderButton
+						iconName={isSidebarVisible ? "panel-left-close" : "panel-left-open"}
+						tooltip={
+							isSidebarVisible
+								? "Hide sessions sidebar"
+								: "Show sessions sidebar"
+						}
+						onClick={(_e) => onToggleSidebar()}
+					/>
+				)}
 				<HeaderButton
 					iconName="plus"
 					tooltip="New chat"

@@ -14,6 +14,7 @@ import type { ChatInputState } from "../../domain/models/chat-input-state";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
+import { SessionSidebar } from "./SessionSidebar";
 // Utility imports
 import { getLogger, Logger } from "../../shared/logger";
 
@@ -70,6 +71,7 @@ function ChatComponent({
 		logger,
 		acpAdapter,
 		settings,
+		vaultPath,
 		session,
 		isSessionReady,
 		messages,
@@ -91,6 +93,9 @@ function ChatComponent({
 		handleRestartAgent,
 		handleClearError,
 		handleClearAgentUpdate,
+		handleRestoreSession,
+		handleForkSession,
+		handleDeleteSession,
 		handleOpenHistory,
 		handleSetMode,
 		handleSetModel,
@@ -102,6 +107,22 @@ function ChatComponent({
 		restoredMessage,
 		handleRestoredMessageConsumed,
 	} = controller;
+
+	const [isSidebarOpen, setIsSidebarOpen] = useState(
+		settings.sessionSidebarOpen,
+	);
+
+	useEffect(() => {
+		setIsSidebarOpen(settings.sessionSidebarOpen);
+	}, [settings.sessionSidebarOpen]);
+
+	const handleToggleSidebar = useCallback(() => {
+		const next = !isSidebarOpen;
+		setIsSidebarOpen(next);
+		void plugin.settingsStore.updateSettings({
+			sessionSidebarOpen: next,
+		});
+	}, [isSidebarOpen, plugin.settingsStore]);
 
 	// ============================================================
 	// Agent ID Restoration (ChatView-specific)
@@ -536,74 +557,124 @@ function ChatComponent({
 				} as React.CSSProperties)
 			: undefined;
 
+	useEffect(() => {
+		if (!isSidebarOpen || !sessionHistory.canShowSessionHistory) {
+			return;
+		}
+
+		if (sessionHistory.canList) {
+			void sessionHistory.fetchSessions(undefined);
+		} else {
+			void sessionHistory.fetchSessions(vaultPath);
+		}
+	}, [
+		isSidebarOpen,
+		sessionHistory.canShowSessionHistory,
+		sessionHistory.canList,
+		sessionHistory.fetchSessions,
+		vaultPath,
+	]);
+
 	return (
 		<div
 			className="agent-client-chat-view-container"
 			style={chatFontSizeStyle}
 		>
-			<ChatHeader
-				agentLabel={activeAgentLabel}
-				isUpdateAvailable={isUpdateAvailable}
-				hasHistoryCapability={sessionHistory.canShowSessionHistory}
-				onNewChat={() => void handleNewChatWithPersist()}
-				onExportChat={() => void handleExportChat()}
-				onShowMenu={handleShowMenu}
-				onOpenHistory={handleOpenHistory}
-			/>
+			{isSidebarOpen && sessionHistory.canShowSessionHistory && (
+				<div
+					className="agent-client-session-sidebar-container"
+					style={{ width: `${settings.sessionSidebarWidth}px` }}
+				>
+					<SessionSidebar
+						sessions={sessionHistory.sessions}
+						loading={sessionHistory.loading}
+						error={sessionHistory.error}
+						hasMore={sessionHistory.hasMore}
+						currentCwd={vaultPath}
+						currentVaultName={plugin.app.vault.getName()}
+						activeSessionId={session.sessionId}
+						canRestore={sessionHistory.canRestore}
+						canFork={sessionHistory.canFork}
+						canList={sessionHistory.canList}
+						isUsingLocalSessions={sessionHistory.isUsingLocalSessions}
+						localSessionIds={sessionHistory.localSessionIds}
+						onRestoreSession={handleRestoreSession}
+						onForkSession={handleForkSession}
+						onDeleteSession={handleDeleteSession}
+						onLoadMore={() => void sessionHistory.loadMoreSessions()}
+						onFetchSessions={(cwd?: string) =>
+							void sessionHistory.fetchSessions(cwd)
+						}
+					/>
+				</div>
+			)}
+			<div className="agent-client-chat-main-column">
+				<ChatHeader
+					agentLabel={activeAgentLabel}
+					isUpdateAvailable={isUpdateAvailable}
+					hasHistoryCapability={sessionHistory.canShowSessionHistory}
+					onNewChat={() => void handleNewChatWithPersist()}
+					onExportChat={() => void handleExportChat()}
+					onShowMenu={handleShowMenu}
+					onOpenHistory={handleOpenHistory}
+					onToggleSidebar={handleToggleSidebar}
+					isSidebarVisible={isSidebarOpen}
+				/>
 
-			<ChatMessages
-				messages={messages}
-				isSending={isSending}
-				isSessionReady={isSessionReady}
-				isRestoringSession={sessionHistory.loading}
-				agentLabel={activeAgentLabel}
-				plugin={plugin}
-				view={view}
-				acpClient={acpClientRef.current}
-				onApprovePermission={permission.approvePermission}
-				hasActivePermission={permission.activePermission != null}
-			/>
+				<ChatMessages
+					messages={messages}
+					isSending={isSending}
+					isSessionReady={isSessionReady}
+					isRestoringSession={sessionHistory.loading}
+					agentLabel={activeAgentLabel}
+					plugin={plugin}
+					view={view}
+					acpClient={acpClientRef.current}
+					onApprovePermission={permission.approvePermission}
+					hasActivePermission={permission.activePermission != null}
+				/>
 
-			<ChatInput
-				isSending={isSending}
-				isSessionReady={isSessionReady}
-				isRestoringSession={sessionHistory.loading}
-				agentLabel={activeAgentLabel}
-				availableCommands={session.availableCommands || []}
-				autoMentionEnabled={settings.autoMentionActiveNote}
-				restoredMessage={restoredMessage}
-				mentions={mentions}
-				slashCommands={slashCommands}
-				autoMention={autoMention}
-				plugin={plugin}
-				view={view}
-				onSendMessage={handleSendMessage}
-				onStopGeneration={handleStopGeneration}
-				onRestoredMessageConsumed={handleRestoredMessageConsumed}
-				modes={session.modes}
-				onModeChange={(modeId) => void handleSetMode(modeId)}
-				models={session.models}
-				onModelChange={(modelId) => void handleSetModel(modelId)}
-				configOptions={session.configOptions}
-				onConfigOptionChange={(configId, value) =>
-					void handleSetConfigOption(configId, value)
-				}
-				usage={session.usage}
-				supportsImages={session.promptCapabilities?.image ?? false}
-				agentId={session.agentId}
-				// Controlled component props (for broadcast commands)
-				inputValue={inputValue}
-				onInputChange={setInputValue}
-				attachedFiles={attachedFiles}
-				onAttachedFilesChange={setAttachedFiles}
-				// Error overlay props
-				errorInfo={errorInfo}
-				onClearError={handleClearError}
-				// Agent update notification props
-				agentUpdateNotification={agentUpdateNotification}
-				onClearAgentUpdate={handleClearAgentUpdate}
-				messages={messages}
-			/>
+				<ChatInput
+					isSending={isSending}
+					isSessionReady={isSessionReady}
+					isRestoringSession={sessionHistory.loading}
+					agentLabel={activeAgentLabel}
+					availableCommands={session.availableCommands || []}
+					autoMentionEnabled={settings.autoMentionActiveNote}
+					restoredMessage={restoredMessage}
+					mentions={mentions}
+					slashCommands={slashCommands}
+					autoMention={autoMention}
+					plugin={plugin}
+					view={view}
+					onSendMessage={handleSendMessage}
+					onStopGeneration={handleStopGeneration}
+					onRestoredMessageConsumed={handleRestoredMessageConsumed}
+					modes={session.modes}
+					onModeChange={(modeId) => void handleSetMode(modeId)}
+					models={session.models}
+					onModelChange={(modelId) => void handleSetModel(modelId)}
+					configOptions={session.configOptions}
+					onConfigOptionChange={(configId, value) =>
+						void handleSetConfigOption(configId, value)
+					}
+					usage={session.usage}
+					supportsImages={session.promptCapabilities?.image ?? false}
+					agentId={session.agentId}
+					// Controlled component props (for broadcast commands)
+					inputValue={inputValue}
+					onInputChange={setInputValue}
+					attachedFiles={attachedFiles}
+					onAttachedFilesChange={setAttachedFiles}
+					// Error overlay props
+					errorInfo={errorInfo}
+					onClearError={handleClearError}
+					// Agent update notification props
+					agentUpdateNotification={agentUpdateNotification}
+					onClearAgentUpdate={handleClearAgentUpdate}
+					messages={messages}
+				/>
+			</div>
 		</div>
 	);
 }

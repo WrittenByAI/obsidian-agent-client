@@ -110,6 +110,9 @@ export interface AgentClientPluginSettings {
 	floatingWindowSize: { width: number; height: number };
 	floatingWindowPosition: { x: number; y: number } | null;
 	floatingButtonPosition: { x: number; y: number } | null;
+	// Session sidebar settings
+	sessionSidebarOpen: boolean;
+	sessionSidebarWidth: number;
 }
 
 const DEFAULT_SETTINGS: AgentClientPluginSettings = {
@@ -174,6 +177,8 @@ const DEFAULT_SETTINGS: AgentClientPluginSettings = {
 	floatingWindowSize: { width: 400, height: 500 },
 	floatingWindowPosition: null,
 	floatingButtonPosition: null,
+	sessionSidebarOpen: true,
+	sessionSidebarWidth: 280,
 };
 
 export default class AgentClientPlugin extends Plugin {
@@ -1222,6 +1227,16 @@ export default class AgentClientPlugin extends Plugin {
 				}
 				return null;
 			})(),
+			sessionSidebarOpen:
+				typeof rawSettings.sessionSidebarOpen === "boolean"
+					? rawSettings.sessionSidebarOpen
+					: DEFAULT_SETTINGS.sessionSidebarOpen,
+			sessionSidebarWidth:
+				typeof rawSettings.sessionSidebarWidth === "number" &&
+				rawSettings.sessionSidebarWidth >= 220 &&
+				rawSettings.sessionSidebarWidth <= 480
+					? rawSettings.sessionSidebarWidth
+					: DEFAULT_SETTINGS.sessionSidebarWidth,
 		};
 
 		this.ensureDefaultAgentId();
