@@ -25,6 +25,7 @@ import {
 	isEmptyResponseError,
 } from "./acp-error-utils";
 import type { AuthenticationMethod } from "../domain/models/chat-session";
+import type { PinnedSelectionContext } from "../domain/models/pinned-selection-context";
 import type {
 	PromptContent,
 	ImagePromptContent,
@@ -63,6 +64,9 @@ export interface PreparePromptInput {
 
 	/** Whether to convert paths to WSL format (Windows + WSL mode) */
 	convertToWsl?: boolean;
+
+	/** Persisted pinned selections that should always be included in prompt */
+	pinnedSelections?: PinnedSelectionContext[];
 
 	/** Whether agent supports embeddedContext capability */
 	supportsEmbeddedContext?: boolean;
@@ -233,6 +237,37 @@ async function preparePromptWithEmbeddedContext(
 		}
 	}
 
+	// Build Resource blocks for pinned selections (frozen snapshots)
+	const pinnedBlocks: PromptContent[] = [];
+	for (const pinned of input.pinnedSelections || []) {
+		let absolutePath = input.vaultBasePath
+			? `${input.vaultBasePath}/${pinned.notePath}`
+			: pinned.notePath;
+
+		if (input.convertToWsl) {
+			absolutePath = convertWindowsPathToWsl(absolutePath);
+		}
+
+		const uri = buildFileUri(absolutePath);
+		pinnedBlocks.push({
+			type: "resource",
+			resource: {
+				uri,
+				mimeType: "text/markdown",
+				text: pinned.text,
+			},
+			annotations: {
+				audience: ["assistant"],
+				priority: 0.9,
+				lastModified: pinned.createdAt,
+			},
+		} as ResourcePromptContent);
+		pinnedBlocks.push({
+			type: "text",
+			text: `Pinned selection from ${pinned.noteName} (lines ${pinned.fromLine}-${pinned.toLine}). This is a frozen snapshot added by the user and should remain in context until removed.`,
+		});
+	}
+
 	// Build auto-mention Resource block
 	const autoMentionBlocks: PromptContent[] = [];
 	if (input.activeNote && !input.isAutoMentionDisabled) {
@@ -266,6 +301,7 @@ async function preparePromptWithEmbeddedContext(
 
 	const agentContent: PromptContent[] = [
 		...resourceBlocks,
+		...pinnedBlocks,
 		...autoMentionBlocks,
 		...(input.message || autoMentionPrefix
 			? [
@@ -346,6 +382,24 @@ async function preparePromptWithTextContext(
 		} catch (error) {
 			console.error(`Failed to read note ${file.path}:`, error);
 		}
+	}
+
+	// Build XML context for pinned selections (frozen snapshots)
+	for (const pinned of input.pinnedSelections || []) {
+		let absolutePath = input.vaultBasePath
+			? `${input.vaultBasePath}/${pinned.notePath}`
+			: pinned.notePath;
+
+		if (input.convertToWsl) {
+			absolutePath = convertWindowsPathToWsl(absolutePath);
+		}
+
+		contextBlocks.push(`<obsidian_pinned_selection selection="lines ${pinned.fromLine}-${pinned.toLine}" note="${absolutePath}">
+Pinned selection from ${pinned.noteName} (lines ${pinned.fromLine}-${pinned.toLine}).
+This is a frozen snapshot that should remain in context until the user removes it.
+
+${pinned.text}
+</obsidian_pinned_selection>`);
 	}
 
 	// Build auto-mention XML context

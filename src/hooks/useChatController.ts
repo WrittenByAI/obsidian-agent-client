@@ -25,6 +25,8 @@ import { useChat } from "./useChat";
 import { usePermission } from "./usePermission";
 import { useAutoExport } from "./useAutoExport";
 import { useSessionHistory } from "./useSessionHistory";
+import { usePinnedSelectionContext } from "./usePinnedSelectionContext";
+import type { PinnedSelectionContext } from "../domain/models/pinned-selection-context";
 
 // Domain model imports
 import type {
@@ -112,6 +114,9 @@ export interface UseChatControllerReturn {
 	handleSetMode: (modeId: string) => Promise<void>;
 	handleSetModel: (modelId: string) => Promise<void>;
 	handleSetConfigOption: (configId: string, value: string) => Promise<void>;
+	handleAddPinnedSelection: () => Promise<void>;
+	handleRemovePinnedSelection: (id: string) => void;
+	pinnedSelections: PinnedSelectionContext[];
 
 	// Input state (for broadcast commands - sidebar only)
 	inputValue: string;
@@ -214,6 +219,11 @@ export function useChatController(
 	);
 
 	const autoExport = useAutoExport(plugin);
+	const pinnedContext = usePinnedSelectionContext(
+		vaultAccessAdapter,
+		settings.displaySettings.maxSelectionLength,
+		settings.displaySettings.maxNoteLength,
+	);
 
 	// Session history hook with callback for session load
 	const handleSessionLoad = useCallback(
@@ -374,6 +384,7 @@ export function useChatController(
 				images: images.length > 0 ? images : undefined,
 				resourceLinks:
 					resourceLinks.length > 0 ? resourceLinks : undefined,
+				pinnedSelections: pinnedContext.pinnedItems,
 			});
 
 			// Save session metadata locally on first message
@@ -397,6 +408,7 @@ export function useChatController(
 			settings.autoMentionActiveNote,
 			shouldConvertToWsl,
 			vaultPath,
+			pinnedContext.pinnedItems,
 		],
 	);
 
@@ -440,6 +452,7 @@ export function useChatController(
 
 			autoMention.toggle(false);
 			chat.clearMessages();
+			pinnedContext.clearPinned();
 
 			const newAgentId = isAgentSwitch
 				? requestedAgentId
@@ -456,6 +469,7 @@ export function useChatController(
 			autoExport,
 			autoMention,
 			chat,
+			pinnedContext,
 			agentSession,
 			sessionHistory,
 		],
@@ -504,6 +518,7 @@ export function useChatController(
 
 		// Clear messages for fresh start
 		chat.clearMessages();
+		pinnedContext.clearPinned();
 
 		try {
 			await agentSession.forceRestartAgent();
@@ -512,7 +527,18 @@ export function useChatController(
 			new Notice("[Agent Client] Failed to restart agent");
 			logger.error("Restart error:", error);
 		}
-	}, [logger, messages, session, autoExport, chat, agentSession]);
+	}, [logger, messages, session, autoExport, chat, pinnedContext, agentSession]);
+
+	const handleAddPinnedSelection = useCallback(async () => {
+		await pinnedContext.addPinnedFromActiveNote(autoMention.activeNote);
+	}, [pinnedContext, autoMention.activeNote]);
+
+	const handleRemovePinnedSelection = useCallback(
+		(id: string) => {
+			pinnedContext.removePinned(id);
+		},
+		[pinnedContext],
+	);
 
 	const handleClearError = useCallback(() => {
 		chat.clearError();
@@ -536,6 +562,7 @@ export function useChatController(
 					`[useChatController] Restoring session: ${sessionId}`,
 				);
 				chat.clearMessages();
+				pinnedContext.clearPinned();
 				await sessionHistory.restoreSession(sessionId, cwd);
 				new Notice("[Agent Client] Session restored");
 			} catch (error) {
@@ -543,7 +570,7 @@ export function useChatController(
 				logger.error("Session restore error:", error);
 			}
 		},
-		[logger, chat, sessionHistory],
+		[logger, chat, pinnedContext, sessionHistory],
 	);
 
 	const handleForkSession = useCallback(
@@ -551,6 +578,7 @@ export function useChatController(
 			try {
 				logger.log(`[useChatController] Forking session: ${sessionId}`);
 				chat.clearMessages();
+				pinnedContext.clearPinned();
 				await sessionHistory.forkSession(sessionId, cwd);
 				new Notice("[Agent Client] Session forked");
 			} catch (error) {
@@ -558,7 +586,7 @@ export function useChatController(
 				logger.error("Session fork error:", error);
 			}
 		},
-		[logger, chat, sessionHistory],
+		[logger, chat, pinnedContext, sessionHistory],
 	);
 
 	const handleDeleteSession = useCallback(
@@ -979,6 +1007,9 @@ export function useChatController(
 		handleSetMode,
 		handleSetModel,
 		handleSetConfigOption,
+		handleAddPinnedSelection,
+		handleRemovePinnedSelection,
+		pinnedSelections: pinnedContext.pinnedItems,
 
 		// Input state
 		inputValue,

@@ -100,6 +100,9 @@ function ChatComponent({
 		handleSetMode,
 		handleSetModel,
 		handleSetConfigOption,
+		handleAddPinnedSelection,
+		handleRemovePinnedSelection,
+		pinnedSelections,
 		inputValue,
 		setInputValue,
 		attachedFiles,
@@ -673,6 +676,9 @@ function ChatComponent({
 					agentUpdateNotification={agentUpdateNotification}
 					onClearAgentUpdate={handleClearAgentUpdate}
 					messages={messages}
+					pinnedSelections={pinnedSelections}
+					onAddPinnedSelection={handleAddPinnedSelection}
+					onRemovePinnedSelection={handleRemovePinnedSelection}
 				/>
 			</div>
 		</div>

@@ -9,6 +9,7 @@ import type { IVaultAccess } from "../domain/ports/vault-access.port";
 import type { NoteMetadata } from "../domain/ports/vault-access.port";
 import type { AuthenticationMethod } from "../domain/models/chat-session";
 import type { ErrorInfo } from "../domain/models/agent-error";
+import type { PinnedSelectionContext } from "../domain/models/pinned-selection-context";
 import type {
 	ImagePromptContent,
 	ResourceLinkPromptContent,
@@ -38,6 +39,8 @@ export interface SendMessageOptions {
 	images?: ImagePromptContent[];
 	/** Attached file references (resource links) */
 	resourceLinks?: ResourceLinkPromptContent[];
+	/** Pinned selection snapshots persisted in chat context */
+	pinnedSelections?: PinnedSelectionContext[];
 }
 
 /**
@@ -588,6 +591,7 @@ export function useChat(
 					message: content,
 					images: options.images,
 					resourceLinks: options.resourceLinks,
+					pinnedSelections: options.pinnedSelections,
 					activeNote: options.activeNote,
 					vaultBasePath: options.vaultBasePath,
 					isAutoMentionDisabled: options.isAutoMentionDisabled,

@@ -236,6 +236,9 @@ function FloatingChatComponent({
 		handleSetMode,
 		handleSetModel,
 		handleSetConfigOption,
+		handleAddPinnedSelection,
+		handleRemovePinnedSelection,
+		pinnedSelections,
 		inputValue,
 		setInputValue,
 		attachedFiles,
@@ -820,6 +823,9 @@ function FloatingChatComponent({
 					agentUpdateNotification={agentUpdateNotification}
 					onClearAgentUpdate={handleClearAgentUpdate}
 					messages={messages}
+					pinnedSelections={pinnedSelections}
+					onAddPinnedSelection={handleAddPinnedSelection}
+					onRemovePinnedSelection={handleRemovePinnedSelection}
 				/>
 			</div>
 		</div>

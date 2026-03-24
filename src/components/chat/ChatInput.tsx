@@ -21,6 +21,7 @@ import type { UseMentionsReturn } from "../../hooks/useMentions";
 import type { UseSlashCommandsReturn } from "../../hooks/useSlashCommands";
 import type { UseAutoMentionReturn } from "../../hooks/useAutoMention";
 import type { ChatMessage } from "../../domain/models/chat-message";
+import type { PinnedSelectionContext } from "../../domain/models/pinned-selection-context";
 import { SuggestionDropdown } from "./SuggestionDropdown";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { AttachmentPreviewStrip } from "./AttachmentPreviewStrip";
@@ -146,6 +147,12 @@ export interface ChatInputProps {
 	onClearAgentUpdate: () => void;
 	/** Messages array for input history navigation */
 	messages: ChatMessage[];
+	/** Pinned selection snapshots that persist in chat context */
+	pinnedSelections: PinnedSelectionContext[];
+	/** Pin current active-note selection into persistent chat context */
+	onAddPinnedSelection: () => Promise<void>;
+	/** Remove pinned selection snapshot by ID */
+	onRemovePinnedSelection: (id: string) => void;
 }
 
 /**
@@ -198,6 +205,9 @@ export function ChatInput({
 	onClearAgentUpdate,
 	// Input history
 	messages,
+	pinnedSelections,
+	onAddPinnedSelection,
+	onRemovePinnedSelection,
 }: ChatInputProps) {
 	const logger = getLogger();
 	const settings = useSettings(plugin);
@@ -273,6 +283,20 @@ export function ChatInput({
 		},
 		[attachedFiles, onAttachedFilesChange],
 	);
+
+	const canPinSelection = Boolean(autoMention.activeNote);
+
+	const handlePinSelection = useCallback(async () => {
+		if (!canPinSelection) {
+			return;
+		}
+		try {
+			await onAddPinnedSelection();
+		} catch (error) {
+			console.error("Failed to pin selection:", error);
+			new Notice("[Agent Client] Failed to pin selection");
+		}
+	}, [canPinSelection, onAddPinnedSelection]);
 
 	/**
 	 * Convert a File to Base64 string.
@@ -1167,6 +1191,31 @@ export function ChatInput({
 				onDragLeave={handleDragLeave}
 				onDrop={(e) => void handleDrop(e)}
 			>
+				{pinnedSelections.length > 0 && (
+					<div className="agent-client-pinned-selection-list">
+						{pinnedSelections.map((item) => (
+							<div
+								key={item.id}
+								className="agent-client-pinned-selection-chip"
+								title={`${item.notePath}:${item.fromLine}-${item.toLine}`}
+							>
+								<span>
+									@{item.noteName}:L{item.fromLine}-{item.toLine}
+								</span>
+								<button
+									className="agent-client-pinned-selection-remove"
+									onClick={() =>
+										onRemovePinnedSelection(item.id)
+									}
+									title="Remove pinned selection"
+								>
+									x
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+
 				{/* Auto-mention Badge */}
 				{autoMentionEnabled && autoMention.activeNote && (
 					<div className="agent-client-auto-mention-inline">
@@ -1210,6 +1259,20 @@ export function ChatInput({
 								}
 							}}
 						/>
+						<button
+							className="agent-client-auto-mention-pin-btn"
+							onClick={() => void handlePinSelection()}
+							disabled={!canPinSelection}
+							title={
+								canPinSelection
+									? autoMention.activeNote?.selection
+										? "Pin selected lines to persistent chat context"
+										: "Pin the active note to persistent chat context"
+									: "Open a note to pin context"
+							}
+						>
+							Pin
+						</button>
 					</div>
 				)}
 

@@ -893,11 +893,54 @@ If your plugin does not need CSS, delete this file.
 .agent-client-auto-mention-inline {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	gap: 4px;
 	padding: 6px 12px;
 	border-bottom: 1px solid var(--background-modifier-border);
 	background-color: transparent;
+}
+
+.agent-client-pinned-selection-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 8px 12px 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.agent-client-pinned-selection-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+	padding: 2px 8px;
+	border-radius: 10px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.agent-client-pinned-selection-chip span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.agent-client-pinned-selection-remove {
+	border: none !important;
+	background: transparent !important;
+	color: var(--text-faint);
+	cursor: pointer;
+	padding: 0 !important;
+	width: 14px;
+	height: 14px;
+	line-height: 14px;
+	font-size: 12px;
+}
+
+.agent-client-pinned-selection-remove:hover {
+	color: var(--text-error);
 }
 
 .agent-client-mention-badge {
@@ -958,6 +1001,26 @@ If your plugin does not need CSS, delete this file.
 	background: none;
 	box-shadow: none;
 	outline: none;
+}
+
+.agent-client-auto-mention-pin-btn {
+	margin-left: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-secondary);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	padding: 1px 8px;
+}
+
+.agent-client-auto-mention-pin-btn:hover:not(:disabled) {
+	color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+}
+
+.agent-client-auto-mention-pin-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .agent-client-chat-input-textarea {
